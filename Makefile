@@ -1,4 +1,4 @@
-.PHONY: all build app run run-headless lint test clean
+.PHONY: all build build-cli app dmg run run-headless lint test clean
 
 APP_NAME = MacHole
 
@@ -13,6 +13,9 @@ build-cli:
 app:
 	./build.sh
 
+dmg:
+	./build.sh --dmg
+
 run: build
 	./$(APP_NAME)
 
@@ -26,4 +29,4 @@ test:
 	go test -ldflags="-linkmode=external" -v ./...
 
 clean:
-	rm -rf $(APP_NAME) $(APP_NAME)-cli $(APP_NAME).app *.iconset AppIcon.icns *.dmg *.zip *.test
+	rm -rf $(APP_NAME) $(APP_NAME)-cli $(APP_NAME).app *.iconset AppIcon.icns *.dmg *.zip *.test dmg_staging

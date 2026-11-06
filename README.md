@@ -1,8 +1,9 @@
 # MacHole
 
+[![Release](https://img.shields.io/github/v/release/0vj/MacHole?color=blue&logo=github)](https://github.com/0vj/MacHole/releases)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2013%2B-000000?logo=apple&logoColor=white)](https://apple.com)
 [![Architecture](https://img.shields.io/badge/Architecture-Universal%20(arm64%20%2B%20x86__64)-blue)](#)
-[![Go Version](https://img.shields.io/badge/Go-1.22%2B-00ADD8?logo=go&logoColor=white)](https://go.dev)
+[![Go Version](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 **Hardware-Bound SOCKS5 Proxy for macOS (`darwin/arm64` & `darwin/amd64`)**  
@@ -48,26 +49,50 @@ If you need certain local or latency-sensitive apps (such as banking portals, lo
 
 ---
 
-## Quick Start
+## Installation
 
-### Prerequisites
+### Option 1: Download Pre-Built DMG (Recommended)
+
+1. Download the latest **`MacHole-macOS-Universal.dmg`** from [**Releases**](https://github.com/0vj/MacHole/releases).
+2. Double-click the DMG and drag **MacHole.app** into your `/Applications` folder.
+
+#### ⚠️ macOS Gatekeeper & Security Notice (First Launch)
+
+Because MacHole is open-source and ad-hoc signed, macOS may display a Gatekeeper prompt stating that the app:
+> *"cannot be opened because Apple cannot check it for malicious software"* or *"MacHole is damaged and can't be opened"*.
+
+This is standard macOS security behavior for apps downloaded outside the Mac App Store. You can bypass this in two seconds using either method:
+
+##### Method A: Right-Click (Finder)
+1. Open `/Applications` in Finder.
+2. **Right-click (or Control-click)** on `MacHole.app` and choose **Open**.
+3. In the security dialog, click **Open**. (You only need to do this once).
+
+##### Method B: Clear Quarantine via Terminal (Fastest)
+If macOS reports the file is "damaged" due to browser quarantine:
+```bash
+xattr -cr /Applications/MacHole.app
+```
+Then launch MacHole normally.
+
+---
+
+### Option 2: Build from Source
+
+#### Prerequisites
 - macOS 13.0+ (Ventura, Sonoma, Sequoia)
-- Go 1.22+ (`brew install go`)
-
-### Build Universal App Bundle
+- Go 1.24+ (`brew install go`)
 
 ```bash
-git clone https://github.com/<your-username>/MacHole.git
+git clone https://github.com/0vj/MacHole.git
 cd MacHole
 
-# Build Universal binary and MacHole.app
-make app
-# or: ./build.sh
-```
+# Build Universal DMG installer
+make dmg
 
-This creates:
-- `./MacHole` — Universal binary (`arm64` + `x86_64`).
-- `./MacHole.app` — Ad-hoc signed macOS application bundle ready to move to `/Applications`.
+# Or build Universal MacHole.app bundle directly
+make app
+```
 
 ---
 
@@ -133,7 +158,7 @@ MacHole/
 ├── .github/
 │   ├── workflows/
 │   │   ├── ci.yml              # CI workflow (go vet, unit tests, universal build)
-│   │   └── release.yml         # Automated GitHub Releases on version tags
+│   │   └── release.yml         # Automated GitHub Releases on version tags (DMG + ZIP + Binary)
 │   ├── ISSUE_TEMPLATE/
 │   │   ├── bug_report.md       # GitHub Issue bug template
 │   │   └── feature_request.md  # GitHub Issue feature template
@@ -156,7 +181,7 @@ MacHole/
 │       ├── server.go           # Embedded dashboard & REST API controller
 │       ├── server_test.go      # Dashboard API unit tests
 │       └── ui.html             # Embedded native-style macOS Inspector dashboard
-├── build.sh                    # Universal binary + .app bundle packaging script
+├── build.sh                    # Universal binary, .app bundle & DMG packaging script
 ├── build_mac_m4.bash           # Deprecation wrapper forwarding to build.sh
 ├── go.mod                      # Go module definition
 ├── Makefile                    # Build, run, test, and lint targets
@@ -178,10 +203,13 @@ make test
 
 # Build native binary only
 make build
+
+# Build universal DMG installer
+make dmg
 ```
 
 ---
 
 ## License
 
-[MIT License](LICENSE) © 2026 Amirmahdi
+[MIT License](LICENSE) © 2026 [Amirmahdi Tafreshi (0vj)](https://github.com/0vj)

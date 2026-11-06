@@ -5,11 +5,15 @@ APP_NAME="MacHole"
 BUNDLE_DIR="${APP_NAME}.app"
 ICONSET_DIR="AppIcon.iconset"
 UNIVERSAL=1
+BUILD_DMG=0
 
 for arg in "$@"; do
   case "$arg" in
     --native)
       UNIVERSAL=0
+      ;;
+    --dmg)
+      BUILD_DMG=1
       ;;
   esac
 done
@@ -112,7 +116,7 @@ cat > "${BUNDLE_DIR}/Contents/Info.plist" <<EOF
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>io.github.machole</string>
+    <string>io.github.0vj.machole</string>
     <key>CFBundleName</key>
     <string>${APP_NAME}</string>
     <key>CFBundleDisplayName</key>
@@ -134,6 +138,19 @@ EOF
 echo "🔏 Performing ad-hoc code signature..."
 codesign --force --deep -s - "${BUNDLE_DIR}"
 touch "${BUNDLE_DIR}"
+
+if [ "${BUILD_DMG}" -eq 1 ]; then
+  DMG_NAME="${APP_NAME}-macOS-Universal.dmg"
+  echo "💿 Creating DMG installer (${DMG_NAME})..."
+  STAGING="dmg_staging"
+  rm -rf "${STAGING}" "${DMG_NAME}"
+  mkdir -p "${STAGING}"
+  cp -R "${BUNDLE_DIR}" "${STAGING}/"
+  ln -s /Applications "${STAGING}/Applications"
+  hdiutil create -volname "${APP_NAME}" -srcfolder "${STAGING}" -ov -format UDZO "${DMG_NAME}"
+  rm -rf "${STAGING}"
+  echo "✅ DMG created: ./${DMG_NAME}"
+fi
 
 echo "✅ Build complete!"
 echo "▶️ Universal binary: ./${APP_NAME}"

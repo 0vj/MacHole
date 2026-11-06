@@ -20,19 +20,40 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Build Universal Bundle
+      - name: Build Universal Bundle and DMG
         run: |
           chmod +x build.sh
-          ./build.sh
+          ./build.sh --dmg
           ditto -c -k --sequesterRsrc --keepParent MacHole.app MacHole-macOS-Universal.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            MacHole-macOS-Universal.dmg
             MacHole-macOS-Universal.zip
             MacHole
           draft: false
           prerelease: false
+          body: |
+            ## MacHole Release
+
+            ### Downloads
+            - **`MacHole-macOS-Universal.dmg`**: Drag-and-drop installer for macOS (Apple Silicon M1/M2/M3/M4 & Intel).
+            - **`MacHole-macOS-Universal.zip`**: Standalone double-clickable `.app` bundle.
+            - **`MacHole`**: Standalone command-line binary.
+
+            ---
+
+            ### ⚠️ macOS Security / Gatekeeper Notice
+            Because MacHole is open-source and ad-hoc signed, macOS may display a notice stating that the app *"cannot be opened because Apple cannot check it for malicious software"* or *"is damaged"*.
+
+            **To open:**
+            1. Drag `MacHole.app` to `/Applications`.
+            2. **Right-click (Control-click)** on `MacHole.app` in `/Applications` and select **Open**, then click **Open** in the prompt.
+            3. *Alternatively*, if blocked by quarantine, open Terminal and run:
+               ```bash
+               xattr -cr /Applications/MacHole.app
+               ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
