@@ -1,0 +1,31 @@
+# Compiled binaries at root
+/MacHole
+/MacHole-cli
+*.app/
+*.dmg
+*.zip
+*.tar.gz
+
+# Iconset temporary generation directories
+*.iconset/
+AppIcon.icns
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Go build & test artifacts
+*.test
+*.out
+*.prof
+
+# IDE and editor settings
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
