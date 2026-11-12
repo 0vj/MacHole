@@ -39,3 +39,13 @@ func TestDashboardServerStatus(t *testing.T) {
 		t.Errorf("Expected version %s, got %s", proxy.Version, st.Version)
 	}
 }
+
+func TestDashboardUIEmbed(t *testing.T) {
+	data, err := uiFS.ReadFile("ui.html")
+	if err != nil {
+		t.Fatalf("Failed to read ui.html from embedded FS: %v", err)
+	}
+	if len(data) == 0 {
+		t.Fatalf("ui.html is empty")
+	}
+}

@@ -3,27 +3,57 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MacHole — Network Interface Inspector &amp; SOCKS5 Router</title>
+  <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="#121316" />
+  <title>MacHole — Hardware-Bound SOCKS5 Interface Router</title>
   <style>
     :root {
-      --bg-window: #161618;
-      --bg-panel: #1E1E21;
-      --bg-elevated: #252529;
-      --bg-input: #121214;
+      color-scheme: dark light;
+      --bg-window: #0D0E12;
+      --bg-toolbar: rgba(22, 23, 28, 0.85);
+      --bg-card: rgba(26, 27, 34, 0.72);
+      --bg-card-hover: rgba(32, 34, 42, 0.82);
+      --bg-card-subtle: rgba(20, 21, 26, 0.6);
+      --bg-elevated: #22232B;
+      --bg-input: rgba(14, 15, 18, 0.85);
       --border-hairline: rgba(255, 255, 255, 0.08);
-      --border-strong: rgba(255, 255, 255, 0.14);
-      --text-primary: #F2F2F7;
-      --text-secondary: #98989F;
-      --text-muted: #636369;
+      --border-medium: rgba(255, 255, 255, 0.14);
+      --border-accent: rgba(10, 132, 255, 0.45);
+
+      --label-primary: #F5F5F7;
+      --label-secondary: #9A9AA2;
+      --label-tertiary: #6E6E77;
+      --label-quaternary: #46464F;
+
       --accent-blue: #0A84FF;
-      --accent-blue-hover: #2492FF;
+      --accent-blue-hover: #2E95FF;
+      --accent-blue-glow: rgba(10, 132, 255, 0.28);
+      --accent-cyan: #64D2FF;
+      --accent-purple: #BF5AF2;
+
       --status-green: #30D158;
+      --status-green-glow: rgba(48, 209, 88, 0.35);
       --status-green-bg: rgba(48, 209, 88, 0.12);
       --status-red: #FF453A;
+      --status-red-glow: rgba(255, 69, 58, 0.35);
       --status-red-bg: rgba(255, 69, 58, 0.12);
       --status-amber: #FFD60A;
+      --status-amber-bg: rgba(255, 214, 10, 0.12);
+
       --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
-      --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+
+      --radius-sm: 6px;
+      --radius-md: 9px;
+      --radius-lg: 12px;
+      --radius-pill: 9999px;
+
+      --shadow-window: 0 20px 40px rgba(0, 0, 0, 0.6);
+      --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.25);
+      --shadow-control: 0 1px 2px rgba(0, 0, 0, 0.35);
+
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
     }
 
     * {
@@ -33,27 +63,66 @@
       -webkit-font-smoothing: antialiased;
     }
 
+    /* Accessibility Skip Link */
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 16px;
+      background: var(--accent-blue);
+      color: #FFF;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      z-index: 9999;
+      text-decoration: none;
+      transition: top 0.2s ease;
+    }
+    .skip-link:focus {
+      top: 12px;
+      outline: 2px solid #FFF;
+    }
+
     html, body {
       height: 100vh;
+      width: 100vw;
       overflow: hidden;
+      background-color: var(--bg-window);
     }
 
     body {
-      background-color: var(--bg-window);
-      color: var(--text-primary);
+      color: var(--label-primary);
       font-family: var(--font-sans);
       font-size: 13px;
       line-height: 1.45;
       display: flex;
       flex-direction: column;
       user-select: none;
+      position: relative;
     }
 
-    /* Native macOS Toolbar Header */
-    .toolbar {
-      background-color: var(--bg-panel);
+    /* Subtle background ambient mesh */
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 15%;
+      width: 70%;
+      height: 240px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(10, 132, 255, 0.08) 0%, rgba(0, 0, 0, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Top macOS Translucent Toolbar Header */
+    .mac-toolbar {
+      position: relative;
+      z-index: 10;
+      background: var(--bg-toolbar);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
       border-bottom: 1px solid var(--border-hairline);
-      padding: 12px 20px;
+      padding: 10px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -61,105 +130,171 @@
       flex-shrink: 0;
     }
 
-    .toolbar-left {
+    .toolbar-lead {
       display: flex;
       align-items: center;
       gap: 12px;
     }
 
-    .app-mark {
-      width: 32px;
-      height: 32px;
-      border-radius: 7px;
-      background: linear-gradient(180deg, #2C2C30 0%, #1C1C1F 100%);
-      border: 1px solid var(--border-strong);
+    /* Native macOS Squircle App Icon */
+    .app-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: linear-gradient(145deg, #2A2B33 0%, #16171D 100%);
+      border: 1px solid rgba(255, 255, 255, 0.16);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--text-primary);
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+      color: #FFF;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+      flex-shrink: 0;
     }
 
-    .app-title-block h1 {
+    .title-group h1 {
       font-size: 13.5px;
       font-weight: 600;
-      letter-spacing: -0.01em;
-      color: var(--text-primary);
+      letter-spacing: -0.015em;
+      color: var(--label-primary);
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    .arch-tag {
+    .chip-darwin {
       font-family: var(--font-mono);
       font-size: 10px;
       font-weight: 500;
-      color: var(--text-secondary);
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-hairline);
-      padding: 1px 6px;
-      border-radius: 4px;
+      color: var(--accent-cyan);
+      background: rgba(100, 210, 255, 0.1);
+      border: 1px solid rgba(100, 210, 255, 0.24);
+      padding: 2px 7px;
+      border-radius: var(--radius-pill);
+      letter-spacing: 0.02em;
     }
 
-    .app-title-block p {
-      font-size: 11.5px;
-      color: var(--text-secondary);
+    .title-group p {
+      font-size: 11px;
+      color: var(--label-secondary);
       margin-top: 1px;
+      font-weight: 400;
     }
 
-    .toolbar-right {
+    /* Center Segmented View Switcher (macOS Style) */
+    .segmented-tabs {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      display: flex;
+      gap: 2px;
+    }
+
+    .segment-btn {
+      background: transparent;
+      border: none;
+      color: var(--label-secondary);
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: 4px;
+      cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 6px;
+      transition: all 0.16s ease;
     }
 
+    .segment-btn:hover {
+      color: var(--label-primary);
+    }
+
+    .segment-btn.active {
+      background: rgba(255, 255, 255, 0.14);
+      color: #FFF;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Toolbar Right: Status Indicator Pill */
     .status-pill {
       display: inline-flex;
       align-items: center;
-      gap: 7px;
-      padding: 4px 10px;
-      border-radius: 6px;
+      gap: 8px;
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
       font-size: 11.5px;
       font-weight: 500;
       font-family: var(--font-mono);
       border: 1px solid var(--border-hairline);
-      background: var(--bg-input);
+      background: var(--bg-card-subtle);
+      transition: all 0.25s ease;
     }
 
-    .status-dot {
-      width: 7px;
-      height: 7px;
+    .status-beacon {
+      position: relative;
+      width: 8px;
+      height: 8px;
+    }
+
+    .status-beacon .dot {
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      background: var(--text-muted);
+      background: var(--label-tertiary);
+      display: block;
+      transition: background 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .status-beacon .ping {
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: inherit;
+      opacity: 0;
+      pointer-events: none;
     }
 
     .status-pill.active {
       background: var(--status-green-bg);
-      border-color: rgba(48, 209, 88, 0.28);
-      color: #63E682;
+      border-color: rgba(48, 209, 88, 0.3);
+      color: #8CF5A7;
+    }
+    .status-pill.active .dot {
+      background: var(--status-green);
+      box-shadow: 0 0 8px var(--status-green-glow);
+    }
+    .status-pill.active .ping {
+      background: var(--status-green);
+      animation: statusPulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
     }
 
-    .status-pill.active .status-dot {
-      background: var(--status-green);
-      box-shadow: 0 0 6px var(--status-green);
+    @keyframes statusPulse {
+      0% { transform: scale(0.8); opacity: 0.8; }
+      100% { transform: scale(2.4); opacity: 0; }
     }
 
     .status-pill.stopped {
       background: var(--status-red-bg);
-      border-color: rgba(255, 69, 58, 0.28);
-      color: #FF6961;
+      border-color: rgba(255, 69, 58, 0.3);
+      color: #FFA59E;
     }
-
-    .status-pill.stopped .status-dot {
+    .status-pill.stopped .dot {
       background: var(--status-red);
+      box-shadow: 0 0 6px var(--status-red-glow);
     }
 
-    /* Main Workspace Layout */
+    /* Main Workspace Container */
     .workspace {
-      max-width: 820px;
+      position: relative;
+      z-index: 1;
+      max-width: 860px;
       width: 100%;
       margin: 0 auto;
-      padding: 16px 20px 18px;
+      padding: 16px 20px;
       display: flex;
       flex-direction: column;
       gap: 14px;
@@ -168,17 +303,19 @@
       overflow: hidden;
     }
 
-    /* Route Topology Strip */
-    .topology-bar {
-      background: var(--bg-panel);
+    /* Interactive Kernel Socket Topology Bar */
+    .topology-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--border-hairline);
-      border-radius: 8px;
-      padding: 10px 14px;
+      border-radius: var(--radius-lg);
+      padding: 11px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
+      gap: 12px;
+      box-shadow: var(--shadow-card);
       flex-shrink: 0;
     }
 
@@ -187,118 +324,145 @@
       align-items: center;
       gap: 8px;
       font-family: var(--font-mono);
-      font-size: 11.5px;
-      color: var(--text-secondary);
+      font-size: 11px;
+      color: var(--label-secondary);
       flex-wrap: wrap;
     }
 
-    .topo-node {
+    .node-pill {
       background: var(--bg-input);
-      border: 1px solid var(--border-hairline);
-      padding: 3px 8px;
-      border-radius: 4px;
-      color: var(--text-primary);
+      border: 1px solid var(--border-medium);
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      color: var(--label-primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: var(--shadow-control);
     }
 
-    .topo-node.kernel {
-      color: #64D2FF;
-      border-color: rgba(100, 210, 255, 0.22);
+    .node-pill.kernel {
+      color: var(--accent-cyan);
+      border-color: rgba(100, 210, 255, 0.35);
       background: rgba(10, 132, 255, 0.08);
+      font-weight: 500;
     }
 
-    .topo-arrow {
-      color: var(--text-muted);
+    .node-pill.hardware {
+      color: #8CF5A7;
+      border-color: rgba(48, 209, 88, 0.35);
+      background: rgba(48, 209, 88, 0.08);
+      font-weight: 500;
     }
 
-    /* Split Panel Grid */
-    .panel-grid {
+    .flow-arrow {
+      color: var(--label-tertiary);
+      display: flex;
+      align-items: center;
+    }
+
+    /* Split Dashboard Panes */
+    .dash-grid {
       display: grid;
       grid-template-columns: 1.15fr 0.85fr;
       gap: 14px;
       flex-shrink: 0;
     }
 
-    @media (max-width: 660px) {
-      .panel-grid {
+    @media (max-width: 720px) {
+      .dash-grid {
         grid-template-columns: 1fr;
+      }
+      .segmented-tabs {
+        display: none;
       }
     }
 
-    .panel {
-      background: var(--bg-panel);
+    .mac-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--border-hairline);
-      border-radius: 8px;
+      border-radius: var(--radius-lg);
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      box-shadow: var(--shadow-card);
     }
 
-    .panel-header {
-      padding: 9px 14px;
-      background: rgba(255, 255, 255, 0.02);
+    .card-header {
+      padding: 10px 16px;
+      background: rgba(255, 255, 255, 0.015);
       border-bottom: 1px solid var(--border-hairline);
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
 
-    .panel-title {
+    .card-title {
       font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-secondary);
+      letter-spacing: 0.06em;
+      color: var(--label-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    .panel-body {
-      padding: 14px;
+    .card-body {
+      padding: 14px 16px;
       display: flex;
       flex-direction: column;
       gap: 12px;
       flex: 1;
     }
 
-    .field-row {
+    /* Form Inputs */
+    .field-pair {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
     }
 
-    @media (max-width: 480px) {
-      .field-row {
+    @media (max-width: 500px) {
+      .field-pair {
         grid-template-columns: 1fr;
       }
     }
 
-    .field-group label {
+    .field-label {
       display: block;
       font-size: 11.5px;
-      color: var(--text-secondary);
+      color: var(--label-secondary);
       margin-bottom: 5px;
       font-weight: 500;
     }
 
-    input[type="text"],
-    select {
+    .mac-input,
+    .mac-select {
       width: 100%;
-      height: 30px;
-      padding: 0 9px;
-      border-radius: 5px;
-      border: 1px solid var(--border-strong);
+      height: 32px;
+      padding: 0 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-medium);
       background: var(--bg-input);
-      color: var(--text-primary);
+      color: var(--label-primary);
       font-family: var(--font-mono);
       font-size: 12px;
       outline: none;
-      transition: border-color 0.12s;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+      transition: all 0.14s ease;
     }
 
-    input[type="text"]:focus,
-    select:focus {
+    .mac-input:focus-visible,
+    .mac-select:focus-visible {
       border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px var(--accent-blue-glow), inset 0 1px 2px rgba(0, 0, 0, 0.3);
     }
 
-    .button-bar {
+    /* Action Buttons (Native macOS Push Buttons) */
+    .action-row {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -306,9 +470,9 @@
     }
 
     .btn {
-      height: 29px;
-      padding: 0 12px;
-      border-radius: 5px;
+      height: 31px;
+      padding: 0 14px;
+      border-radius: var(--radius-sm);
       font-family: var(--font-sans);
       font-size: 12px;
       font-weight: 500;
@@ -316,351 +480,503 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 7px;
       border: 1px solid transparent;
-      transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+      box-shadow: var(--shadow-control);
+      transition: all 0.12s ease;
+      white-space: nowrap;
     }
 
     .btn:active {
-      transform: translateY(0.5px);
+      transform: translateY(0.5px) scale(0.99);
+    }
+
+    .btn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--accent-blue-glow);
     }
 
     .btn-primary {
-      background: var(--accent-blue);
-      color: #FFFFFF;
+      background: linear-gradient(180deg, var(--accent-blue-hover) 0%, var(--accent-blue) 100%);
+      color: #FFF;
+      border-color: rgba(255, 255, 255, 0.18);
       flex: 1;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
     }
-
     .btn-primary:hover {
-      background: var(--accent-blue-hover);
+      filter: brightness(1.08);
     }
 
-    .btn-neutral {
+    .btn-secondary {
       background: var(--bg-elevated);
-      border-color: var(--border-strong);
-      color: var(--text-primary);
+      border-color: var(--border-medium);
+      color: var(--label-primary);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFF;
     }
 
-    .btn-neutral:hover {
-      background: #2E2E33;
+    .btn-destructive {
+      background: rgba(255, 69, 58, 0.15);
+      border-color: rgba(255, 69, 58, 0.32);
+      color: #FFA59E;
+    }
+    .btn-destructive:hover {
+      background: rgba(255, 69, 58, 0.24);
+      color: #FFF;
     }
 
-    .btn-stop {
-      background: rgba(255, 69, 58, 0.14);
-      border-color: rgba(255, 69, 58, 0.3);
-      color: #FF6961;
+    /* Egress IP Verification Banner */
+    .verification-card {
+      background: var(--bg-input);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--label-secondary);
+      transition: all 0.2s ease;
     }
 
-    .btn-stop:hover {
-      background: rgba(255, 69, 58, 0.22);
+    .verification-card.success {
+      border-color: rgba(48, 209, 88, 0.4);
+      background: rgba(48, 209, 88, 0.08);
+      color: #8CF5A7;
     }
 
-    /* CLI Quick Copy Row */
-    .cli-box {
+    .verification-card.error {
+      border-color: rgba(255, 69, 58, 0.4);
+      background: rgba(255, 69, 58, 0.08);
+      color: #FFA59E;
+    }
+
+    /* Quick Snippet Box */
+    .snippet-box {
       margin-top: auto;
       background: var(--bg-input);
       border: 1px solid var(--border-hairline);
-      border-radius: 5px;
-      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      padding: 7px 11px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
     }
 
-    .cli-box code {
+    .snippet-box code {
       font-family: var(--font-mono);
       font-size: 11px;
-      color: var(--text-secondary);
+      color: var(--label-secondary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       user-select: text;
     }
 
-    .btn-copy {
+    .btn-icon-copy {
       background: transparent;
-      border: 1px solid var(--border-strong);
-      color: var(--text-secondary);
+      border: 1px solid var(--border-medium);
+      color: var(--label-secondary);
       font-size: 11px;
-      height: 22px;
-      padding: 0 8px;
+      height: 24px;
+      padding: 0 9px;
       border-radius: 4px;
       cursor: pointer;
-      flex-shrink: 0;
-    }
-
-    .btn-copy:hover {
-      color: var(--text-primary);
-      border-color: var(--text-secondary);
-    }
-
-    /* Telemetry Table */
-    .kv-list {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-      background: var(--border-hairline);
-      border: 1px solid var(--border-hairline);
-      border-radius: 6px;
-      overflow: hidden;
-    }
-
-    .kv-row {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 5px;
+      flex-shrink: 0;
+      transition: all 0.12s ease;
+    }
+
+    .btn-icon-copy:hover {
+      color: var(--label-primary);
+      border-color: var(--label-secondary);
+    }
+
+    /* Metric Grid for Telemetry */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric-tile {
       background: var(--bg-input);
-      padding: 7px 11px;
-      font-size: 12px;
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
 
-    .kv-key {
-      color: var(--text-secondary);
-    }
-
-    .kv-val {
-      font-family: var(--font-mono);
+    .metric-key {
+      font-size: 10.5px;
+      color: var(--label-secondary);
       font-weight: 500;
-      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .metric-val {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--label-primary);
       font-variant-numeric: tabular-nums;
     }
 
-    /* Direct Egress Verification Result */
-    .egress-banner {
-      font-family: var(--font-mono);
+    .telemetry-table {
+      width: 100%;
+      border-collapse: collapse;
       font-size: 11.5px;
-      padding: 7px 10px;
-      border-radius: 5px;
       background: var(--bg-input);
       border: 1px solid var(--border-hairline);
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
     }
 
-    .egress-banner.ok {
-      border-color: rgba(48, 209, 88, 0.35);
-      color: #63E682;
-      background: rgba(48, 209, 88, 0.07);
+    .telemetry-table td {
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border-hairline);
     }
 
-    .egress-banner.err {
-      border-color: rgba(255, 69, 58, 0.35);
-      color: #FF6961;
-      background: rgba(255, 69, 58, 0.07);
+    .telemetry-table tr:last-child td {
+      border-bottom: none;
     }
 
-    /* Connection Inspector Log Console */
-    .console-toolbar {
+    .telemetry-table .col-label {
+      color: var(--label-secondary);
+      width: 52%;
+    }
+
+    .telemetry-table .col-val {
+      font-family: var(--font-mono);
+      font-weight: 500;
+      color: var(--label-primary);
+      text-align: right;
+    }
+
+    /* Live Socket Console Panel */
+    .console-panel {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .console-controls {
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    .filter-input {
-      height: 22px !important;
-      width: 170px !important;
-      font-size: 11px !important;
-      padding: 0 7px !important;
+    .search-input {
+      height: 24px;
+      width: 180px;
+      font-size: 11px;
+      padding: 0 8px;
     }
 
-    .panel-logs {
-      flex: 1;
-      min-height: 0;
+    .btn-small {
+      height: 24px;
+      padding: 0 9px;
+      font-size: 11px;
     }
 
     .log-stream {
-      background: #0D0D0F;
+      background: #090A0D;
       flex: 1;
       min-height: 0;
       overflow-y: auto;
-      padding: 8px 12px;
+      padding: 10px 14px;
       font-family: var(--font-mono);
       font-size: 11.5px;
-      line-height: 1.55;
-      color: #D1D1D6;
+      line-height: 1.6;
+      color: #D6D6DC;
       user-select: text;
     }
 
-    .log-line {
+    .log-entry {
       padding: 2px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.025);
       white-space: pre-wrap;
       word-break: break-all;
     }
 
-    .log-line .ts {
-      color: var(--text-muted);
+    .log-ts {
+      color: var(--label-tertiary);
       margin-right: 6px;
     }
 
-    .log-line .kw-connect {
+    .log-kw-connect {
       color: #30D158;
       font-weight: 600;
     }
 
-    .log-line .kw-err {
+    .log-kw-error {
       color: #FF453A;
       font-weight: 600;
     }
 
+    .log-kw-bypass {
+      color: #64D2FF;
+      font-weight: 500;
+    }
+
     .log-empty {
-      color: var(--text-muted);
-      padding: 24px 0;
+      color: var(--label-tertiary);
+      padding: 32px 0;
       text-align: center;
       font-style: italic;
+    }
+
+    /* macOS Window Status Bar Footer */
+    .mac-footer {
+      padding: 6px 20px;
+      font-size: 11px;
+      color: var(--label-tertiary);
+      border-top: 1px solid var(--border-hairline);
+      background: rgba(14, 15, 18, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .mac-footer a {
+      color: var(--label-secondary);
+      text-decoration: none;
+    }
+    .mac-footer a:hover {
+      color: var(--label-primary);
     }
   </style>
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
 
-  <!-- Top Utility Header -->
-  <header class="toolbar">
-    <div class="toolbar-left">
-      <div class="app-mark" aria-hidden="true">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="9"></circle>
-          <circle cx="12" cy="12" r="3"></circle>
-          <line x1="12" y1="3" x2="12" y2="9"></line>
-          <line x1="12" y1="15" x2="12" y2="21"></line>
+  <!-- Top macOS Liquid Glass Toolbar -->
+  <header class="mac-toolbar" role="banner">
+    <div class="toolbar-lead">
+      <div class="app-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9.5"></circle>
+          <circle cx="12" cy="12" r="3.5"></circle>
+          <line x1="12" y1="2.5" x2="12" y2="8.5"></line>
+          <line x1="12" y1="15.5" x2="12" y2="21.5"></line>
         </svg>
       </div>
-      <div class="app-title-block">
+      <div class="title-group">
         <h1>
           MacHole
-          <span class="arch-tag">darwin/arm64 · IP_BOUND_IF</span>
+          <span class="chip-darwin" id="archBadge">darwin/arm64 · IP_BOUND_IF</span>
         </h1>
-        <p>Hardware-Bound SOCKS5 Interface Router (Bypasses System utun VPN)</p>
+        <p>Hardware-Bound SOCKS5 Interface Router (Bypasses utun VPN)</p>
       </div>
     </div>
-    <div class="toolbar-right">
-      <div id="statusBadge" class="status-pill">
-        <span class="status-dot"></span>
-        <span id="statusText">Initializing...</span>
+
+    <!-- Segmented Navigation (Apple HIG) -->
+    <nav class="segmented-tabs" aria-label="Views">
+      <button type="button" class="segment-btn active" data-tab="all" id="tabAll">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        Overview
+      </button>
+      <button type="button" class="segment-btn" data-tab="console" id="tabConsole">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+        Socket Stream
+      </button>
+    </nav>
+
+    <!-- Toolbar Trailing: Real-time Status Badge -->
+    <div class="toolbar-trail">
+      <div id="statusBadge" class="status-pill" role="status" aria-live="polite">
+        <div class="status-beacon">
+          <span class="dot"></span>
+          <span class="ping"></span>
+        </div>
+        <span id="statusText">Connecting...</span>
       </div>
     </div>
   </header>
 
-  <main class="workspace">
-    <!-- Kernel Socket Binding Path Strip -->
-    <section class="topology-bar" aria-label="Socket Routing Path">
+  <!-- Main Content Workspace -->
+  <main id="main-content" class="workspace" role="main">
+
+    <!-- Kernel Route Topology Strip -->
+    <section class="topology-card" aria-label="Socket Routing Path">
       <div class="topology-flow">
-        <span>Client App</span>
-        <span class="topo-arrow">→</span>
-        <span class="topo-node" id="topoListen">127.0.0.1:1080</span>
-        <span class="topo-arrow">→</span>
-        <span class="topo-node kernel" id="topoKernel">setsockopt(IP_BOUND_IF)</span>
-        <span class="topo-arrow">→</span>
-        <span class="topo-node" id="topoIface">en0 (Direct ISP)</span>
+        <span class="node-pill">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          Client App
+        </span>
+        <span class="flow-arrow">➔</span>
+        <span class="node-pill" id="topoListen">127.0.0.1:1080</span>
+        <span class="flow-arrow">➔</span>
+        <span class="node-pill kernel" id="topoKernel">setsockopt(IP_BOUND_IF)</span>
+        <span class="flow-arrow">➔</span>
+        <span class="node-pill hardware" id="topoIface">en0 (Physical NIC)</span>
+        <span class="flow-arrow">➔</span>
+        <span class="node-pill">Direct Internet</span>
       </div>
-      <button type="button" class="btn btn-neutral" id="btnVerifyIP" style="height:25px; font-size:11px;">
+
+      <button type="button" class="btn btn-secondary" id="btnVerifyIP" style="height:27px; font-size:11.5px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
         Verify Direct Egress IP
       </button>
     </section>
 
-    <div class="panel-grid">
+    <!-- Top Grid: Socket Binding & Interface Telemetry -->
+    <div class="dash-grid" id="dashGrid">
+      
       <!-- Left: Listener & Interface Configuration -->
-      <section class="panel">
-        <div class="panel-header">
-          <span class="panel-title">Socket Binding Configuration</span>
-          <span style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);" id="boundIdxLabel">ifindex: —</span>
+      <section class="mac-card">
+        <div class="card-header">
+          <span class="card-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            Socket Binding Control
+          </span>
+          <span style="font-family:var(--font-mono); font-size:11px; color:var(--label-tertiary);" id="boundIdxLabel">ifindex: —</span>
         </div>
-        <div class="panel-body">
-          <div class="field-row">
-            <div class="field-group">
-              <label for="listenAddr">SOCKS5 Listen Address</label>
-              <input type="text" id="listenAddr" value="127.0.0.1:1080" spellcheck="false" />
+        <div class="card-body">
+          <div class="field-pair">
+            <div>
+              <label class="field-label" for="listenAddr">SOCKS5 Listen Address</label>
+              <input type="text" id="listenAddr" class="mac-input" value="127.0.0.1:1080" spellcheck="false" />
             </div>
-            <div class="field-group">
-              <label for="ifaceSelect">Physical Network Interface</label>
-              <select id="ifaceSelect"></select>
+            <div>
+              <label class="field-label" for="ifaceSelect">Physical Network Interface</label>
+              <select id="ifaceSelect" class="mac-select"></select>
             </div>
           </div>
 
-          <div class="button-bar">
-            <button type="button" class="btn btn-primary" id="btnStart">Apply &amp; Rebind Socket</button>
-            <button type="button" class="btn btn-stop" id="btnStop">Stop Listener</button>
+          <div class="action-row">
+            <button type="button" class="btn btn-primary" id="btnStart">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              Apply &amp; Rebind Socket
+            </button>
+            <button type="button" class="btn btn-destructive" id="btnStop">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+              Stop Listener
+            </button>
           </div>
 
-          <div id="egressResult" class="egress-banner">
-            <span>Direct Egress IP Check: Not tested yet</span>
+          <!-- Direct Egress IP Verification Result -->
+          <div id="egressResult" class="verification-card" role="region" aria-live="polite">
+            <span>Direct Egress IP Check: Click verify above to test</span>
           </div>
 
-          <div class="cli-box">
+          <!-- Quick Copy Terminal Command -->
+          <div class="snippet-box">
             <code id="cliSnippet">curl --socks5 127.0.0.1:1080 https://api.ipify.org</code>
-            <button type="button" class="btn-copy" id="btnCopyCli">Copy CLI</button>
+            <button type="button" class="btn-icon-copy" id="btnCopyCli" title="Copy terminal command">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Copy</span>
+            </button>
           </div>
         </div>
       </section>
 
-      <!-- Right: Interface Telemetry -->
-      <section class="panel">
-        <div class="panel-header">
-          <span class="panel-title">Interface Telemetry</span>
-          <span style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">RFC 1928</span>
+      <!-- Right: Real-time Interface Telemetry -->
+      <section class="mac-card">
+        <div class="card-header">
+          <span class="card-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            Interface Telemetry
+          </span>
+          <span style="font-family:var(--font-mono); font-size:11px; color:var(--label-tertiary);">RFC 1928</span>
         </div>
-        <div class="panel-body">
-          <div class="kv-list">
-            <div class="kv-row">
-              <span class="kv-key">Bound Hardware Device</span>
-              <span class="kv-val" id="statIface">en0</span>
+        <div class="card-body">
+          <div class="metric-grid">
+            <div class="metric-tile">
+              <span class="metric-key">Active Streams</span>
+              <span class="metric-val" id="activeConns" style="color:#64D2FF;">0</span>
             </div>
-            <div class="kv-row">
-              <span class="kv-key">Interface IPv4 Address</span>
-              <span class="kv-val" id="statIP">—</span>
+            <div class="metric-tile">
+              <span class="metric-key">Total Handled</span>
+              <span class="metric-val" id="totalConns">0</span>
             </div>
-            <div class="kv-row">
-              <span class="kv-key">Active SOCKS5 Streams</span>
-              <span class="kv-val" id="activeConns">0</span>
+            <div class="metric-tile">
+              <span class="metric-key">Direct TX (Sent)</span>
+              <span class="metric-val" id="bytesTX">0 B</span>
             </div>
-            <div class="kv-row">
-              <span class="kv-key">Total Handled Connections</span>
-              <span class="kv-val" id="totalConns">0</span>
-            </div>
-            <div class="kv-row">
-              <span class="kv-key">Direct Egress (TX)</span>
-              <span class="kv-val" id="bytesTX">0 B</span>
-            </div>
-            <div class="kv-row">
-              <span class="kv-key">Direct Ingress (RX)</span>
-              <span class="kv-val" id="bytesRX">0 B</span>
+            <div class="metric-tile">
+              <span class="metric-key">Direct RX (Recv)</span>
+              <span class="metric-val" id="bytesRX">0 B</span>
             </div>
           </div>
+
+          <table class="telemetry-table">
+            <tbody>
+              <tr>
+                <td class="col-label">Physical Device</td>
+                <td class="col-val" id="statIface">en0</td>
+              </tr>
+              <tr>
+                <td class="col-label">Interface IPv4</td>
+                <td class="col-val" id="statIP">—</td>
+              </tr>
+              <tr>
+                <td class="col-label">Upstream DNS</td>
+                <td class="col-val" id="statDNS">1.1.1.1:53</td>
+              </tr>
+              <tr>
+                <td class="col-label">Bypass Technique</td>
+                <td class="col-val" style="color:var(--accent-cyan);">IP_BOUND_IF (BSD)</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
     </div>
 
-    <!-- Bottom: Live Connection Inspector -->
-    <section class="panel panel-logs">
-      <div class="panel-header">
-        <span class="panel-title">Live Socket Event Log</span>
-        <div class="console-toolbar">
-          <input type="text" id="logFilter" class="filter-input" placeholder="Filter host or IP..." spellcheck="false" />
+    <!-- Bottom: Live Socket Event Inspector -->
+    <section class="mac-card console-panel" id="consoleSection">
+      <div class="card-header">
+        <span class="card-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+          Live Socket Event Console
+        </span>
+        <div class="console-controls">
+          <input type="text" id="logFilter" class="mac-input search-input" placeholder="Filter host, port or IP..." spellcheck="false" />
+          <button type="button" class="btn btn-secondary btn-small" id="btnClearLogs" title="Clear current event log view">
+            Clear
+          </button>
         </div>
       </div>
-      <div class="log-stream" id="logBox">
-        <div class="log-empty">Waiting for SOCKS5 connections...</div>
+      <div class="log-stream" id="logBox" role="log" aria-live="polite">
+        <div class="log-empty">Waiting for SOCKS5 socket activity...</div>
       </div>
     </section>
   </main>
+
+  <!-- macOS Window Status Bar -->
+  <footer class="mac-footer" role="contentinfo">
+    <span>MacHole Native Engine · macOS Darwin Kernel Integration</span>
+    <span id="footerStats">0 active connections · 0 bytes transferred</span>
+  </footer>
 
   <script>
     let firstLoad = true;
     let cachedLogs = [];
 
-    // Fallback mock state when previewed standalone outside the Go binary
+    // Fallback simulation state when loaded outside binary
     const mockState = {
+      version: '1.0.0',
       running: true,
       listen_addr: '127.0.0.1:1080',
       bound_interface: 'en0',
       bound_index: 14,
       bound_ip: '192.168.1.42',
-      active_conns: 2,
-      total_conns: 38,
-      bytes_tx: 482910,
-      bytes_rx: 6912400,
+      upstream_dns: '1.1.1.1:53',
+      active_conns: 1,
+      total_conns: 42,
+      bytes_tx: 524288,
+      bytes_rx: 7340032,
       interfaces: [
         { name: 'en0', index: 14, ip: '192.168.1.42', is_up: true },
         { name: 'en1', index: 15, ip: '', is_up: false }
@@ -668,15 +984,15 @@
       recent_logs: [
         '[10:41:02] SOCKS5 proxy listening on 127.0.0.1:1080 -> bound to en0 [Index: 14, IP: 192.168.1.42] (VPN bypassed)',
         '[10:41:18] CONNECT api.ipify.org:443 -> 172.67.74.152 (Direct via en0)',
-        '[10:42:05] CONNECT core.telegram.org:443 -> 149.154.167.99 (Direct via en0)'
+        '[10:42:05] CONNECT api.github.com:443 -> 140.82.121.3 (Direct via en0)'
       ]
     };
 
-    function formatBytes(b) {
-      if (!b || b < 1024) return (b || 0) + ' B';
-      if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
-      if (b < 1073741824) return (b / 1048576).toFixed(2) + ' MB';
-      return (b / 1073741824).toFixed(2) + ' GB';
+    function formatBytes(bytes) {
+      if (!bytes || bytes < 1024) return (bytes || 0) + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      if (bytes < 1073741824) return (bytes / 1048576).toFixed(2) + ' MB';
+      return (bytes / 1073741824).toFixed(2) + ' GB';
     }
 
     function escapeHtml(str) {
@@ -699,10 +1015,11 @@
       logBox.innerHTML = filtered.slice().reverse().map(line => {
         const safe = escapeHtml(line);
         const formatted = safe
-          .replace(/^(\[\d{2}:\d{2}:\d{2}\])/, '<span class="ts">$1</span>')
-          .replace(/\b(CONNECT)\b/g, '<span class="kw-connect">$1</span>')
-          .replace(/\b(error|failed)\b/gi, '<span class="kw-err">$1</span>');
-        return `<div class="log-line">${formatted}</div>`;
+          .replace(/^(\[\d{2}:\d{2}:\d{2}\])/, '<span class="log-ts">$1</span>')
+          .replace(/\b(CONNECT)\b/g, '<span class="log-kw-connect">$1</span>')
+          .replace(/\b(error|failed)\b/gi, '<span class="log-kw-error">$1</span>')
+          .replace(/\b(Direct via\s+\w+|VPN bypassed)\b/gi, '<span class="log-kw-bypass">$1</span>');
+        return `<div class="log-entry">${formatted}</div>`;
       }).join('');
     }
 
@@ -712,7 +1029,7 @@
 
       if (data.running) {
         badge.className = 'status-pill active';
-        statusText.textContent = `ACTIVE · ${data.bound_interface} (${data.bound_ip || 'No IP'})`;
+        statusText.textContent = `ACTIVE · ${data.bound_interface} (${data.bound_ip || 'No IPv4'})`;
       } else {
         badge.className = 'status-pill stopped';
         statusText.textContent = 'STOPPED';
@@ -740,10 +1057,14 @@
 
       document.getElementById('statIface').textContent = data.bound_interface || '—';
       document.getElementById('statIP').textContent = data.bound_ip || '—';
+      document.getElementById('statDNS').textContent = data.upstream_dns || '1.1.1.1:53';
       document.getElementById('activeConns').textContent = data.active_conns ?? 0;
       document.getElementById('totalConns').textContent = data.total_conns ?? 0;
       document.getElementById('bytesTX').textContent = formatBytes(data.bytes_tx);
       document.getElementById('bytesRX').textContent = formatBytes(data.bytes_rx);
+
+      const totalBytes = (data.bytes_tx || 0) + (data.bytes_rx || 0);
+      document.getElementById('footerStats').textContent = `${data.active_conns ?? 0} active connection${(data.active_conns === 1) ? '' : 's'} · ${formatBytes(totalBytes)} transferred`;
 
       document.getElementById('cliSnippet').textContent = `curl --socks5 ${listenAddr} https://api.ipify.org`;
 
@@ -758,7 +1079,6 @@
         const data = await res.json();
         applyStatusData(data);
       } catch (e) {
-        // Fallback for standalone preview
         applyStatusData(mockState);
       }
     }
@@ -798,27 +1118,28 @@
 
     async function checkDirectIP() {
       const banner = document.getElementById('egressResult');
-      banner.className = 'egress-banner';
+      banner.className = 'verification-card';
       banner.innerHTML = '<span>Querying api.ipify.org directly via physical hardware interface...</span>';
       try {
         const res = await fetch('/api/check-ip');
         const data = await res.json();
         if (data.ip) {
-          banner.className = 'egress-banner ok';
-          banner.innerHTML = `<span>Direct Egress IP (VPN Bypassed): <strong>${escapeHtml(data.ip)}</strong></span>`;
+          banner.className = 'verification-card success';
+          banner.innerHTML = `<span>Direct Egress IP (VPN Bypassed): <strong>${escapeHtml(data.ip)}</strong> via ${escapeHtml(data.interface || 'NIC')}</span>`;
         } else {
-          banner.className = 'egress-banner err';
-          banner.innerHTML = `<span>Egress check failed: ${escapeHtml(data.error || 'Unknown error')}</span>`;
+          banner.className = 'verification-card error';
+          banner.innerHTML = `<span>Egress check failed: ${escapeHtml(data.error || 'Network error')}</span>`;
         }
       } catch (e) {
-        banner.className = 'egress-banner ok';
-        banner.innerHTML = '<span>Direct Egress IP (Preview Simulation): <strong>85.133.210.19</strong></span>';
+        banner.className = 'verification-card success';
+        banner.innerHTML = '<span>Direct Egress IP (Simulated): <strong>85.133.210.19</strong> (Direct en0)</span>';
       }
     }
 
     function copyCliCommand() {
       const text = document.getElementById('cliSnippet').textContent;
       const btn = document.getElementById('btnCopyCli');
+      const span = btn.querySelector('span');
       const fallbackCopy = () => {
         const ta = document.createElement('textarea');
         ta.value = text;
@@ -832,9 +1153,27 @@
       } else {
         fallbackCopy();
       }
-      btn.textContent = 'Copied';
-      setTimeout(() => { btn.textContent = 'Copy CLI'; }, 1400);
+      span.textContent = 'Copied!';
+      setTimeout(() => { span.textContent = 'Copy'; }, 1500);
     }
+
+    // Segmented tabs switcher
+    document.getElementById('tabAll').addEventListener('click', () => {
+      document.getElementById('tabAll').classList.add('active');
+      document.getElementById('tabConsole').classList.remove('active');
+      document.getElementById('dashGrid').style.display = 'grid';
+    });
+
+    document.getElementById('tabConsole').addEventListener('click', () => {
+      document.getElementById('tabConsole').classList.add('active');
+      document.getElementById('tabAll').classList.remove('active');
+      document.getElementById('dashGrid').style.display = 'none';
+    });
+
+    document.getElementById('btnClearLogs').addEventListener('click', () => {
+      cachedLogs = [];
+      renderLogs();
+    });
 
     document.getElementById('btnStart').addEventListener('click', startProxy);
     document.getElementById('btnStop').addEventListener('click', stopProxy);
